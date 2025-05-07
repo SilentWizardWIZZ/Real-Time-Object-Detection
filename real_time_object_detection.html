@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Real-Time Object Detection - AI/ML Demo</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap');
+    html, body {
+      margin: 0; padding: 0; height: 100%;
+      background: linear-gradient(135deg, #5f72be, #9b23ea);
+      font-family: 'Roboto Mono', monospace, monospace, monospace, monospace, monospace, monospace, monospace, monospace, monospace, monospace, monospace, monospace, monospace, monospace, monospace, monospace, monospace, monospace, monospace, monospace, monospace, monospace, monospace, monospace, monospace, monospace;
+      display: flex; justify-content: center; align-items: center;
+    }
+    #app {
+      position: relative;
+      width: 350px;
+      height: 600px;
+      background: #1a1c2c;
+      border-radius: 20px;
+      box-shadow: 0 0 35px #7a3ff3cc;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #dedede;
+      user-select: none;
+    }
+    header {
+      font-size: 1.6rem;
+      font-weight: 700;
+      padding: 20px 10px 10px;
+      width: 100%;
+      text-align: center;
+      color: #e3e3fa;
+      text-shadow: 0 0 10px #a183f6cc;
+    }
+    #video-container {
+      position: relative;
+      width: 320px;
+      height: 420px;
+      border-radius: 16px;
+      overflow: hidden;
+      background: black;
+      box-shadow: 0 0 20px #7a3ff3cc;
+      margin-bottom: 15px;
+    }
+    video, canvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 320px;
+      height: 420px;
+      border-radius: 16px;
+      object-fit: cover;
+      user-select: none;
+      pointer-events: none;
+    }
+    #status {
+      font-size: 1rem;
+      padding: 8px 10px;
+      color: #c0c0f0;
+      user-select: text;
+      min-height: 24px;
+      text-align: center;
+      width: 100%;
+    }
+    /* Bounding box styles */
+    .bounding-box-label {
+      position: absolute;
+      background: #7a3ff3cc;
+      color: white;
+      padding: 3px 6px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 0.8rem;
+      user-select: none;
+      pointer-events: none;
+      text-shadow: 0 0 5px black;
+    }
+  </style>
+</head>
+<body>
+  <div id="app" role="main" aria-label="Real-Time Object Detection AI Demo">
+    <header>Real-Time Object Detection</header>
+    <div id="video-container">
+      <video id="video" autoplay muted playsinline></video>
+      <canvas id="overlay"></canvas>
+    </div>
+    <div id="status" role="status" aria-live="polite">Loading model...</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.12.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js"></script>
+  <script>
+    (async () => {
+      const video = document.getElementById('video');
+      const canvas = document.getElementById('overlay');
+      const ctx = canvas.getContext('2d');
+      const statusEl = document.getElementById('status');
+
+      const width = 320;
+      const height = 420;
+      canvas.width = width;
+      canvas.height = height;
+
+      // Setup webcam
+      async function setupCamera() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: width, height: height },
+            audio: false,
+          });
+          video.srcObject = stream;
+          return new Promise((resolve) => {
+            video.onloadedmetadata = () => {
+              resolve(video);
+            };
+          });
+        } catch (err) {
+          statusEl.textContent = "Error accessing camera. Please allow permissions and reload.";
+          console.error(err);
+          throw err;
+        }
+      }
+
+      // Load COCO-SSD model
+      statusEl.textContent = "Loading COCO-SSD model...";
+      const model = await cocoSsd.load();
+      statusEl.textContent = "Model loaded. Starting camera...";
+      await setupCamera();
+      video.play();
+
+      statusEl.textContent = "Detecting objects...";
+
+      function drawBoundingBoxes(predictions) {
+        // Clear
+        ctx.clearRect(0, 0, width, height);
+
+        predictions.forEach(prediction => {
+          const [x, y, boxWidth, boxHeight] = prediction.bbox;
+          ctx.strokeStyle = '#7a3ff3cc';
+          ctx.lineWidth = 3;
+          ctx.font = '16px Roboto Mono';
+          ctx.fillStyle = '#7a3ff3cc';
+
+          // Draw rectangle
+          ctx.strokeRect(x, y, boxWidth, boxHeight);
+
+          // Draw label background
+          const text = `${prediction.class} (${(prediction.score * 100).toFixed(1)}%)`;
+          const textWidth = ctx.measureText(text).width;
+          const textHeight = 18;
+
+          ctx.fillRect(x, y > textHeight ? y - textHeight : y, textWidth + 8, textHeight);
+
+          // Draw text
+          ctx.fillStyle = '#fff';
+          ctx.fillText(text, x + 4, y > textHeight ? y - 4 : y + textHeight - 4);
+        });
+      }
+
+      async function detectFrame() {
+        const predictions = await model.detect(video);
+        drawBoundingBoxes(predictions);
+        requestAnimationFrame(detectFrame);
+      }
+
+      detectFrame();
+    })();
+  </script>
+</body>
+</html>
+</content>
+</create_file>
